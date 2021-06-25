@@ -1,5 +1,6 @@
 class SamlController < ApplicationController
   skip_before_action :verify_authenticity_token
+  skip_before_action :authenticate!
 
   def init
     request = OneLogin::RubySaml::Authrequest.new
@@ -15,6 +16,7 @@ class SamlController < ApplicationController
       user = User.find_or_create_by(email: response.nameid) do |user|
         user.name = "#{response.attributes["firstName"]} #{response.attributes["lastName"]}"
       end
+      session[:user_id] = user.id
       redirect_to admin_root_path
     else
       authorize_failure  # This method shows an error message
@@ -25,6 +27,11 @@ class SamlController < ApplicationController
   def metadata
     meta = OneLogin::RubySaml::Metadata.new
     render xml: meta.generate(saml_settings, true)
+  end
+
+  def logout
+    session[:user_id] = nil
+    redirect_to '/'
   end
 
   private
